@@ -1,11 +1,11 @@
 import { OnModuleInit } from '@nestjs/common';
 import {
+  ConnectedSocket,
   MessageBody,
   SubscribeMessage,
   WebSocketGateway,
   WebSocketServer,
 } from '@nestjs/websockets';
-import { Client } from 'node_modules/socket.io/dist/client';
 import { stringify } from 'querystring';
 import { Server, Socket } from 'socket.io';
 @WebSocketGateway()
@@ -19,13 +19,21 @@ export class chatgateway implements OnModuleInit {
   }
 
   @SubscribeMessage('joinroom')
-  handlejoinroom(Client: Socket, room: string) {
+  handlejoinroom(
+    @ConnectedSocket() Client: Socket,
+    @MessageBody() room: string,
+  ) {
     Client.join(room);
-    Client.emit(`${Client.id} has joined the room!`);
+    Client.to(room).emit(`${Client.id} has joined the room!`);
+    console.log(`${Client.id} has joined the chatroom!`);
   }
   @SubscribeMessage('sendmessage')
-  handlesendmessage(client: Socket, message: string, room: string) {
-    this.server.to(room).emit(message);
+  handlesendmessage(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() message: string,
+    room: string,
+  ) {
+    this.server.to(room).emit('message', { sender: client.id, message });
   }
 
   @SubscribeMessage('message')
